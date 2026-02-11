@@ -29,6 +29,8 @@ The system closes the loop:
 
 Measure → Detect → Explain → Act → Audit → Improve
 
+View the Dashboard here: https://github.com/Hasnain91169/Executive-Operational-Intelligence/blob/main/Power%20BI%20Dashboard.pdf
+
 ## Implementation Plan
 
 1. Scaffold project + contracts + API skeleton
