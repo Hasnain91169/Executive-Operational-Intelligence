@@ -1,0 +1,24 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual envs
+.venv/
+venv/
+
+# Local secrets
+OpenAI Key.txt
+.env
+
+# Generated datasets and mart assets
+data/raw/*.csv
+data/raw/*.json
+data/clean/*.csv
+data/mart/*.csv
+data/mart/*.db
+data/mart/*.json
+automation/webhook_events.jsonl
+
+# OS artifacts
+.DS_Store
+Thumbs.db
