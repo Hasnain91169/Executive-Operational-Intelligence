@@ -11,6 +11,24 @@ It demonstrates enterprise BI execution end-to-end:
 - RPA-style webhook automations with run tracking
 - Governance layer (contracts, data quality scorecard, ownership, usage, feedback)
 
+## Business Objective
+
+Operational Intelligence Copilot demonstrates how a BI & Automation Lead can:
+
+Detect KPI degradation before SLA failure
+
+Quantify operational cost leakage
+
+Provide auditable root-cause decomposition
+
+Trigger automated corrective workflows
+
+Prove measurable impact over time
+
+The system closes the loop:
+
+Measure → Detect → Explain → Act → Audit → Improve
+
 ## Implementation Plan
 
 1. Scaffold project + contracts + API skeleton
@@ -147,7 +165,7 @@ Required KPIs are defined in `kpi_definitions` and computed into `fact_kpi_daily
 - SLA breach rate %
 - Exception rate per 100 jobs
 - Manual workload hours (weekly rollup)
-- Cost leakage estimate (�)
+- Cost leakage estimate (£)
 - Data quality score (0-100)
 - Automation impact (hours + GBP weekly and cumulative)
 - Framework adoption proxy
