@@ -264,31 +264,34 @@ def generate_operational_facts(
                 incident_probability = 0.1
                 in_scenario_b = d == scenarios.scenario_b_date and site_id == 2 and product_id == 3
                 if in_scenario_b:
-                    incident_probability = 0.88
+                    # Force a clear exception-rate spike for deterministic demo behaviour.
+                    incident_probability = 1.0
 
                 if rng.random() < incident_probability:
-                    if in_scenario_b:
-                        incident_type = "Late materials"
-                        minutes_lost = int(np.clip(rng.normal(165, 45), 60, 360))
-                    else:
-                        incident_type = str(rng.choice(incident_types, p=incident_weights))
-                        minutes_lost = int(np.clip(rng.normal(72, 32), 12, 260))
+                    burst = int(rng.integers(3, 6)) if in_scenario_b else 1
+                    for _ in range(burst):
+                        if in_scenario_b:
+                            incident_type = "Late materials"
+                            minutes_lost = int(np.clip(rng.normal(170, 40), 70, 360))
+                        else:
+                            incident_type = str(rng.choice(incident_types, p=incident_weights))
+                            minutes_lost = int(np.clip(rng.normal(72, 32), 12, 260))
 
-                    severity = "High" if minutes_lost >= 150 else "Medium" if minutes_lost >= 70 else "Low"
-                    incidents.append(
-                        {
-                            "incident_id": f"INC-{incident_counter:08d}",
-                            "date": d.isoformat(),
-                            "date_key": date_key(d),
-                            "site_id": site_id,
-                            "job_id": job_id,
-                            "incident_type": incident_type,
-                            "severity": severity,
-                            "minutes_lost": minutes_lost,
-                            "product_id": product_id,
-                        }
-                    )
-                    incident_counter += 1
+                        severity = "High" if minutes_lost >= 150 else "Medium" if minutes_lost >= 70 else "Low"
+                        incidents.append(
+                            {
+                                "incident_id": f"INC-{incident_counter:08d}",
+                                "date": d.isoformat(),
+                                "date_key": date_key(d),
+                                "site_id": site_id,
+                                "job_id": job_id,
+                                "incident_type": incident_type,
+                                "severity": severity,
+                                "minutes_lost": minutes_lost,
+                                "product_id": product_id,
+                            }
+                        )
+                        incident_counter += 1
 
             cost_types = ["Overtime", "Rework", "Expedite", "Claims"]
             for cost_type in cost_types:

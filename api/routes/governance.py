@@ -11,7 +11,7 @@ from api.models import FeedbackRequest
 from api.routes.auth import enforce_roles, require_role
 from governance.metric_store import framework_adoption_proxy
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 router = APIRouter(prefix="/governance", tags=["governance"])
 

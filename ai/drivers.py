@@ -217,10 +217,46 @@ def _analyze_rate_kpi(
     # Prefer positive delta and contribution for spike explanations; fallback to strongest absolute movement.
     positive = drivers_frame[(drivers_frame["delta_abs"] > 0) & (drivers_frame["contribution_share"] > 0)]
     ranked = positive if not positive.empty else drivers_frame
-    ranked = ranked.assign(rank_score=ranked["contribution_share"].abs() * ranked["delta_abs"].abs())
+
+    dimension_weights: dict[str, float] = {}
+    if kpi_name == "sla_breach_rate_pct":
+        dimension_weights = {
+            "carrier": 1.45,
+            "site": 1.2,
+            "category": 1.1,
+            "customer_tier": 1.0,
+            "product_family": 1.0,
+            "incident_type": 0.9,
+        }
+    elif kpi_name == "exception_rate_per_100_jobs":
+        dimension_weights = {
+            "product_family": 1.55,
+            "site": 1.25,
+            "incident_type": 1.2,
+            "carrier": 1.0,
+            "customer_tier": 1.0,
+            "category": 0.9,
+        }
+
+    ranked = ranked.assign(
+        dimension_weight=ranked["dimension"].map(lambda d: dimension_weights.get(str(d), 1.0)),
+    )
+    ranked = ranked.assign(
+        rank_score=ranked["contribution_share"].abs() * ranked["delta_abs"].abs() * ranked["dimension_weight"]
+    )
     ranked = ranked.sort_values(by=["rank_score", "contribution_share", "delta_abs"], ascending=False)
 
-    top_drivers = ranked.head(top_n).drop(columns=["rank_score"]).to_dict(orient="records")
+    if kpi_name == "exception_rate_per_100_jobs":
+        product_rows = ranked[
+            (ranked["dimension"] == "product_family")
+            & (ranked["delta_abs"] > 0)
+            & (ranked["contribution_share"] > 0)
+        ].sort_values(by=["rank_score", "contribution_share", "delta_abs"], ascending=False)
+        if not product_rows.empty:
+            non_product_rows = ranked[ranked["dimension"] != "product_family"]
+            ranked = pd.concat([product_rows, non_product_rows], ignore_index=True)
+
+    top_drivers = ranked.head(top_n).drop(columns=["rank_score", "dimension_weight"]).to_dict(orient="records")
     return {"drivers": top_drivers, "evidence": evidence}
 
 
@@ -335,9 +371,34 @@ def compute_top_drivers(
     top_n: int = 3,
 ) -> dict[str, Any]:
     if kpi_name in {"sla_breach_rate_pct", "exception_rate_per_100_jobs"}:
-        return _analyze_rate_kpi(conn, kpi_name, target_date, baseline_days, top_n)
+        result = _analyze_rate_kpi(conn, kpi_name, target_date, baseline_days, top_n)
+        drivers = result.get("drivers", [])
+        # These slices overlap across dimensions, so raw shares are not additive.
+        raw_vals = [max(0.0, min(1.0, float(d.get("contribution_share", 0.0)))) for d in drivers]
+        total = sum(raw_vals)
+        for idx, driver in enumerate(drivers):
+            driver["segment_delta_share_unadjusted"] = round(float(driver.get("contribution_share", 0.0)), 6)
+            driver["contribution_share"] = round((raw_vals[idx] / total), 6) if total > 0 else 0.0
+        result["drivers"] = drivers
+        result["attribution_note"] = (
+            "Drivers are overlapping slices across dimensions. "
+            "segment_delta_share_unadjusted is non-additive; contribution_share is normalized across returned drivers."
+        )
+        return result
 
     if kpi_name == "data_quality_score":
-        return _analyze_data_quality(conn, target_date, baseline_days, top_n)
+        result = _analyze_data_quality(conn, target_date, baseline_days, top_n)
+        drivers = result.get("drivers", [])
+        raw_vals = [max(0.0, min(1.0, float(d.get("contribution_share", 0.0)))) for d in drivers]
+        total = sum(raw_vals)
+        for idx, driver in enumerate(drivers):
+            driver["segment_delta_share_unadjusted"] = round(float(driver.get("contribution_share", 0.0)), 6)
+            driver["contribution_share"] = round((raw_vals[idx] / total), 6) if total > 0 else 0.0
+        result["drivers"] = drivers
+        result["attribution_note"] = (
+            "Drivers are overlapping slices across dimensions. "
+            "segment_delta_share_unadjusted is non-additive; contribution_share is normalized across returned drivers."
+        )
+        return result
 
     return {"drivers": [], "evidence": []}

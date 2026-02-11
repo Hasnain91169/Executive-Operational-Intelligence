@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 
 from ai.anomaly import recompute_anomalies
 from api.db import get_connection
@@ -31,8 +31,12 @@ def list_anomalies(
 
 
 @router.post("/anomalies/run")
-def run_anomalies(payload: AnomalyRunRequest, role: str = Depends(require_role)) -> dict:
+def run_anomalies(
+    payload: AnomalyRunRequest | None = Body(default=None),
+    role: str = Depends(require_role),
+) -> dict:
     enforce_roles(role, {"exec", "ops", "finance"})
+    payload = payload or AnomalyRunRequest()
 
     with get_connection() as conn:
         anomalies = recompute_anomalies(

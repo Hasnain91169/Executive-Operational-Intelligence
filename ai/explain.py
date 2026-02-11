@@ -52,6 +52,21 @@ def _get_kpi_snapshot(conn: sqlite3.Connection, kpi_name: str, target_date: str)
         """,
         (kpi_name, target_date),
     ).fetchone()
+    if not anomaly_row:
+        # Ensure explain output includes anomaly metadata even if anomaly run has not been called yet.
+        from ai.anomaly import recompute_anomalies
+
+        recompute_anomalies(conn, kpi_names=[kpi_name])
+        anomaly_row = conn.execute(
+            """
+            SELECT score, baseline, status, scenario_tag
+            FROM anomalies
+            WHERE kpi_name = ? AND date = ?
+            ORDER BY score DESC
+            LIMIT 1
+            """,
+            (kpi_name, target_date),
+        ).fetchone()
 
     return {
         "kpi_name": kpi_name,
@@ -147,6 +162,7 @@ def explain_kpi(
     driver_result = compute_top_drivers(conn, kpi_name=kpi_name, target_date=target_date, baseline_days=14, top_n=3)
     drivers = driver_result.get("drivers", [])
     evidence = driver_result.get("evidence", [])
+    attribution_note = driver_result.get("attribution_note")
 
     recommended_actions = [_recommended_action_for_driver(kpi_name, driver) for driver in drivers]
 
@@ -167,6 +183,8 @@ def explain_kpi(
         "recommended_actions": recommended_actions,
         "evidence": evidence,
     }
+    if attribution_note:
+        output["attribution_note"] = attribution_note
 
     rephrased = _maybe_rephrase_with_openai(output)
     if rephrased:
