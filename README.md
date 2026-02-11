@@ -31,7 +31,7 @@ Measure → Detect → Explain → Act → Audit → Improve
 
 View the Dashboard here: 
 
-![Executive Dashboard](Power%20BI%20Dashboard.pdf)
+![Executive Dashboard](docs/image_2026-02-11_151717283.png)
 
 ## Implementation Plan
 
